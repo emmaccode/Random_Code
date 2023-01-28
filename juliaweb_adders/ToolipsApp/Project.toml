@@ -1,0 +1,8 @@
+name = "ToolipsApp"
+uuid = "e3262f1b-59e9-4387-8656-f3666099fe6d"
+authors = ["emmac <emmettgb@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Toolips = "a47e2ad8-fcf7-417c-9746-32b9bdf220bd"
