@@ -1,0 +1,237 @@
+multiple dispatch as a paradigm
+Julia’s novel nature is primarily reflected through its usage of multiple dispatch as a programming paradigm. This has a number of consequences that propagate through the language — some of which are somewhat unconventional, like the high-level syntax capabilities of the language, and some of which expand the paradigm to new heights.
+
+5 Julia Tricks For High-Level Syntax
+Some simple Julia tricks to make more accessible syntax for your module.
+chifi.dev
+
+One aspect of this paradigm that has radical ramifications on the scope of Julia software lies in how Julia handles polymorphism and abstraction. With Julia’s multiple dispatch implementation, we are able to dispatch the exact portion of our type system we would like to make a Method for. Something that this then pairs really well with is Julia’s ability to import and extend functions from any Module — aside from Core — with new methods.
+
+Using a combination of abstraction and extending software, we can create some seriously powerful and cross-compatible software in Julia that coexists with the entire Julia ecosystem. With our packages, anyone is able to import and extend our type system and add new methods and types under our abstraction hierarchies. The challenge to this is that we have to create software that reflects this extensibility, and that topic is certainly something worth going over.
+
+notebook:
+
+Emmys-NoteBooks/Julia/extensible software in julia.ipynb at master · emmaccode/Emmys-NoteBooks
+Random notebooks for various projects. Contribute to emmaccode/Emmys-NoteBooks development by creating an account on…
+github.com
+
+abstract project design
+Extensible software design in Julia starts with our approach to implementing our idea in the first place. If we want to create software that is extensible, we will want to select a scope that is broad and can be extended. A scope that is too specific will limit the capabilities of our software drastically. When building an extensible project, it is best to start as broadly as possible in the type hierarchy and work our way down.
+
+Using abstract project design will benefit us and our users in the long run, because it will allow us to add what is essentially a new field of infrastructure joined to any point in our project’s design. Object-oriented programming’s solution to this is inheritance and sub-classes, Julia’s solution to this is multiple — dispatch adding methods to existing functions for new types. Both approaches are good, but the multiple dispatch approach means that our static types and constructors are only representative of three things:
+
+Fields.
+How the type was constructed (more on this soon),
+and type (including the abstraction level for that type.)
+And our most important ways to get to those fields (our constructors).
+To facilitate all of these details, Julia has a rather intricate and incredibly powerful parameterized type system. Implementing our project into this type system begins with writing an extensible type-hierarchy.
+
+extensible types
+The most important things given by a package in Julia are its abstract types and the methods that are dispatched to these types. Of course, the concrete types below this abstraction hierarchy are also important; the Method we build generally is designed to apply to to the context of the concrete types below this hierarchy. For today’s project, we are going to be creating an interesting piece of software called ParametricPairs.
+
+This package is a simple package that I think demonstrates these concepts well; the goal is to make a new ParametricPair type which is essentially just a copy of the Base Pair type with a special parameter. In the example of the ParametricPair , I am considering this implementation as a concrete type. This application is that of a concrete type because we need data. Considering that this type is a concrete type, it makes a lot of sense for us to construct an abstract type hierarchy. I will start this off with AbstractParametricPair , then add ParametricPair as a sub-type of that type.
+
+abstract type AbstractParametricPair end
+
+mutable struct ParametricPair <: AbstractParametricPair
+    first::Any
+    second::Any
+end
+The goal of this new ParametricPair type is to accomplish different actions in different contexts with different data values which lie in sets of two. While this is possible with a Base.Pair , the major shortcoming is that extending Base.Pair will change the functionality of all pairs in Julia, something we probably do not want to do if we want maximized software compatibility and extensibility. Creating our own type, we will also be able to change how that type acts in certain contexts, which could be incredibly useful. Before we get into creating some parameters for this type, let’s first create a few functions. This will also help us to establish what kind of fields and parameters we are going to want for this type.
+
+Base
+In order to make your type actually worth extending, it is worth extending some of Base into your package to make your package fit better with Julia. This has the unintended consequence of also making your package blend better with other packages in the Julia ecosystem, which also likely use Base in their own code. This also makes the experience more user-friendly — people importing your package will already know how to index your type, for example. This being considered, for the ParametricPair I think there are two main things I want to dispatch for now: string and the ability to index the pair.
+
+import Base: getindex, setindex!, string
+I will write a quick getindex . The first thing we will do is check if our index is greater than two or less than 1. If that is the case, we will throw a BoundsError . The BoundsError takes our structure and then the failed index we used:
+
+getindex(pp::AbstractParametricPair, n::Int64) = begin
+    if n > 2 || n < 1
+        throw(BoundsError(pp,[n]))
+    end
+end
+From here, we will determine if it is two. If there is not an error or a return of the second index in this function yet, then we know that n is 1, so we will make the conditional for two and if neither condition is tripped, we return the first index.
+
+getindex(pp::AbstractParametricPair, n::Int64) = begin
+    if n > 2 || n < 1
+        throw(BoundsError(pp,[n]))
+    elseif n == 2
+        return(pp.second)
+    end
+    return(pp.first)
+end
+Now I will make a string function utilizing this new getindex function.
+
+function string(p::AbstractParametricPair)
+    "$(string(p[1]))$(string(p[2]))"
+end
+Let’s test all these functions really quick:
+
+parpair = ParametricPair("hello ", "world")
+
+parpair[1]
+
+"hello "
+
+parpair[-1]
+
+BoundsError: attempt to access ParametricPair at index [-1]
+
+Stacktrace:
+ [1] getindex(pp::ParametricPair, n::Int64)
+   @ Main ./In[3]:3
+ [2] top-level scope
+   @ In[7]:1
+
+parpair[2]
+
+"world"
+
+parpair[3]
+
+BoundsError: attempt to access ParametricPair at index [3]
+
+Stacktrace:
+ [1] getindex(pp::ParametricPair, n::Int64)
+   @ Main ./In[3]:3
+ [2] top-level scope
+   @ In[9]:1
+
+
+string(parpair)
+
+"hello world"
+This is a rather basic tie-in, and there is a lot you can do on this front, we could add filtering or specified indexing for specific vector types, for example. A binding to keys and values for a Vector would also be a very useful thing to have, or a binding to show. There are a lot of different ways to comfortably seat your type into Base! … To open up a lot of these avenues for extension while not requiring users to add new data structures, we could utilize parametric polymorphism. While we used polymorphism to write an abstract method to encompass multiple sub-types of AbstractParametricPair , we can use parametric polymorphism to encompass different constructions of a ParametricPair by changing its type based on how it was constructed.
+
+using parameterized typing
+A parameter in Julia is a distinction in type that allows us to infer some information about how that type was constructed. This allows us to reuse the same type for a larger context of scenarios. Rather than having
+
+mutable struct StringPair
+   s::String
+   s2::String
+end
+mutable struct FloatPair
+   s::Float64
+   s2::Float64
+end
+....
+We now have
+
+mutable struct Pair{T, T2}
+   one::T
+   two::T2
+end
+Whenever we construct a Pair with the latter constructor, the Pair becomes of type Pair{first parameter, second parameter} . Our actual Pair type becomes Pair{<:Any, <:Any} .
+
+Pair{<:Any, <:Any} == Pair
+
+true
+There is no Pair now — per say, but the union of types in the {} syntax are dynamic names for this type which can be changed by us as well as others. These parameters can be a Type , an abstract type , an Integer , a Union , a Bool , or a Symbol . With ParametricPairs , the intention is to make a typed pair constructor that can be used in a myriad of different applications. To implent this, we will create a very similar constructor to the Pair example seen above.
+
+abstract type AbstractParametricPair end
+
+mutable struct ParametricPair{FIRST, SECOND, PT} <: AbstractParametricPair
+    first::FIRST
+    second::SECOND
+end
+When a Type is provided as the parameter, we are able to reference this type inside of the inner constructor and type fields accordingly. This is important, because Julia has serious performance problems if a field type is unknown — this is known as ambiguous field typing, and using parameters we can allow a type to exist as multiple definitions of itself that encompass a sub-typed parameter.
+
+In our case, the first parameter FIRST is the type of the field first , SECOND has the same correlation, but PT is planned to be a symbolic representation of a ParametricPair type. The implications of this are significant, it means that we can essentially create a type and a method for a function at the same time. This allows for an incredibly extensible software platform, as now we can develop APIs around ParametricPairs of specific types holding specific data types by only writing methods. The last thing we might want to add to this constructor is an inner constructor that facilitates an easy function call to construct this type.
+
+mutable struct ParametricPair{FIRST, SECOND, PT} <: AbstractParametricPair
+    first::FIRST
+    second::SECOND
+    ParametricPair(first::Any, second::Any, type::Any) = begin
+        new{typeof(first), typeof(second), type}(first, second)
+    end
+end
+Fortunately, the entire API we initially constructed before can remain, the only thing I added was a pp function to quickly make a ParametricPair .
+
+module ParametricPairs
+import Base: getindex, setindex!, string
+
+abstract type AbstractParametricPair end
+
+mutable struct ParametricPair{FIRST, SECOND, PT} <: AbstractParametricPair
+    first::FIRST
+    second::SECOND
+    ParametricPair(first::Any, second::Any, type::Any) = begin
+        new{typeof(first), typeof(second), type}(first, second)
+    end
+end
+
+getindex(pp::AbstractParametricPair, n::Int64) = begin
+    if n > 2 || n < 1
+        throw(BoundsError(pp,[n]))
+    elseif n == 2
+        return(pp.second)
+    elseif n == 1
+        return(pp.first)
+    end
+end
+
+function string(pps::AbstractParametricPair ...)
+    join(["$(string(p[1]))$(string(p[2]))" for p in pps])::String
+end
+
+pp(a::Any, a2::Any, par::Any = :standard) = begin
+    ParametricPair(a, a2, par)
+end
+
+export pp
+end # parametric pairs :)
+extensible documentation
+Now that we have a fully functioning API for our ParametricPairs , we need to consider that other people might want to extend this API. This is where my helpful list of Julia documentation tips comes in:
+
+Julia Documentation Tips
+Write better julia documentation by using these simple parameters.
+chifi.dev
+
+Using the pointers from this list, as well as the Base julia documentation for some additional guidance, we can begin to explain our documentation from this extensible standpoint. When it comes to our abstract types, we should mention their consistencies.
+
+
+"""
+```julia
+abstract type AbstractParametricPair end
+```
+`ParametricPairs` are used to add symbolic functionality 
+to two-data-type pairs in Julia. Parametric pairs can be indexed 
+with a 1 or 2 to get that respective pair key or value.
+###### consistencies
+- `first**::Any**`
+- `second**::Any**`
+- `string(**::AbstractParametricPair**)`
+"""
+abstract type AbstractParametricPair end
+In the case that someone wanted to create a new parametric pair that took different fields, they could do so pretty easily without writing new methods so long as they follow these consistencies. As a result, putting this crucial information into the documentation can go really far towards promoting the creation of compatible packages — and a subsequent ecosystem around our project. It might also be a good idea to list the methods that are commonly used alongside this abstract type , I like to list this in the consistencies section, as well.
+
+We might not want to extend getindex in this case, but there are certainly going to be other functions here worth documenting. For example, pp could probably use a docstring.
+
+extending our package
+Now that we have written an extensible software package using abstraction and parametric polymorphism, it is time to demonstrate the power of building on such a platform by extending our package. We will start with a relatively simple example that creates a labeling syntax around our parametric pairs.
+
+function string(ppairs::ParametricPairs.ParametricPair{String, <:Any, :label} ...)
+    println(join(["$(ppair[1]): $(ppair[2])" for ppair in ppairs], "\n"))
+end
+Another option in these cases is to provide a Type as a parameter, this is why I typed the place-able parameter as Any in pp — using this technique, we can also abstraction — and parametric abstraction. In this example, I work to preserve memory by using an integer type parameter for repeating values.
+
+abstract type ParameterEntry end
+abstract type Repeat{N} <: ParameterEntry end
+
+abstract type ParameterEntry end
+abstract type Repeat{N} <: ParameterEntry end
+abstract type ParameterEntry end
+abstract type Repeat{N} <: ParameterEntry end
+repeatlen
+function string(ppa::ParametricPairs.ParametricPair{String, <:Any, <:ParameterEntry})
+    repeatlen = typeof(ppa).parameters[3].parameters[1]
+    join(["$(ppa.first): $(ppa.second)" for ppair in 1:repeatlen], "\n")
+end
+
+"hello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!\nhello: friends!"
+If we needed some fields to store data in, we could always write a new sub-type of ParametricPairs — from the outside or the inside — to facilitate those new fields, making this entire package infinitely extensible!
+
+conclusion
+While most people’s surface-level understanding of the Julia language encompasses the language’s speed, few descriptions of the language focus on just how powerful multiple dispatch as a programming paradigm is alongside the robust type system of the language. When software is built in an extensible way in Julia, it is compatible with software across a broad scope of packages and is more likely to become a dependent for more packages.
+
+I did not originally intend for this project to be something I actually develop, but considering how useful this package is it already seems like a possibility! Julia is a really great language to create an ecosystem in for this reason; it is really easy to connect everything! This is the reason I love the language so much — thank you for reading!
