@@ -1,0 +1,4 @@
+name = "FileInterpolators"
+uuid = "48db201f-99fc-4d24-aa6a-16b5f953d35a"
+authors = ["emmac "]
+version = "0.1.0"
