@@ -1,0 +1,7 @@
+name = "SampleChat"
+uuid = "f0b95f35-481c-4673-b9cf-f2efb9e4849f"
+authors = ["emmac "]
+version = "0.1.0"
+
+[deps]
+ToolipsUDP = "c24f5779-9d3b-4059-90d7-a34104ea6889"
