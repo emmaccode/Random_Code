@@ -1,0 +1,13 @@
+name = "PrettyDash"
+uuid = "f6d29f7e-d2e1-40c4-9d4f-b12643ebc1c2"
+authors = ["emmac "]
+version = "0.1.0"
+
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Gattino = "f0fb3ee5-f608-41f3-a42d-dac276373afc"
+GattinoPleths = "9f033946-9ab4-431a-b842-48f7db4940ab"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Toolips = "a47e2ad8-fcf7-417c-9746-32b9bdf220bd"
+ToolipsSession = "2fe55384-55bc-4df3-9d59-c817d405cd05"

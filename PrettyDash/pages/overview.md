@@ -1,0 +1,8 @@
+### a looming threat
+Wildfires in the United States increase in frequency nearly every year. 2023 was the second deadliest year in recorded history for human deaths by wildfires according to [Statista](https://www.statista.com/statistics/1293254/global-number-of-deaths-due-to-wildfires/). Should the alarm bells be ringing? Or is there more to the story of wildfires that might lessen the iminent danger that wildfires seem to pose?
+
+Though wildfires are **always** a threat to both the ecosystem and human society, there may be signs that we are getting better at stopping them... There are also indications we are either getting better at starting them, or perhaps climate change is playing a role in accelerating their occurances. Wildfires are likely to get more severe and devastating in the eventual future. While forest management remains quite important, it is also important to remember that the *vast* majority of forest fires are started by humans themselves. Humans are the cause of around 85-percent of wildfires, according to [The National Park Service.](https://www.nps.gov/articles/wildfire-causes-and-evaluation.htm)
+
+## exploring wildfires in the united states
+This simple dashboard was created to demonstrate the immense analytical possibilities of a dashboard to learn and present interesting things about data. On this dashboard, we will explore interesting correlations and ponder what they 
+might mean in the broader context of our current world and global ecosystem.
