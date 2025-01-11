@@ -1,0 +1,7 @@
+name = "MyUDPServer"
+uuid = "f6a42ec8-85d0-4123-9b67-52ae64348865"
+authors = ["Emma Cabrera <emmaccode@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+ToolipsUDP = "c24f5779-9d3b-4059-90d7-a34104ea6889"
