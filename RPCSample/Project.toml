@@ -1,0 +1,14 @@
+name = "RPCSample"
+uuid = "93a67571-8007-45a9-be63-c2f578190190"
+authors = ["emmac <emmaccode@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Toolips = "a47e2ad8-fcf7-417c-9746-32b9bdf220bd"
+ToolipsSession = "2fe55384-55bc-4df3-9d59-c817d405cd05"
+
+[compat]
+Revise = "3.12.0"
+Toolips = "0.3.14"
+ToolipsSession = "0.5.3"
