@@ -1,0 +1,12 @@
+name = "ToolipsAPIRouter"
+uuid = "a1769736-0768-43dd-b22a-2d946b435d48"
+version = "0.1.0"
+authors = ["emmac <emmaccode@gmail.com>"]
+
+[deps]
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+Toolips = "a47e2ad8-fcf7-417c-9746-32b9bdf220bd"
+
+[compat]
+JSON = "1.6.1"
+Toolips = "0.3.15"
