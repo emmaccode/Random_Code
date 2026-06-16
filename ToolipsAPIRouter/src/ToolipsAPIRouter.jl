@@ -10,30 +10,23 @@ const GET = RQType{:get}()
 
 abstract type AbstractAPIRoute <: Toolips.AbstractHTTPRoute end
 
-struct APIRoute{T} <: AbstractAPIRoute
+mutable struct APIRoute{T} <: AbstractAPIRoute
     path::String
     page::Function
     argnames::Vector{Symbol}
 end
 
-struct ParentRoute <: Toolips.AbstractHTTPRoute
+struct CombinedAPIRoute <: AbstractAPIRoute
     path::String
-    pages::Vector{APIRoute}
+    routes::Pair{APIRoute{:get}, APIRoute{:post}}
 end
 
-function route!(c::AbstractConnection, route::ParentRoute)
-    
-
-end
-
-function route!(c::AbstractConnection, routes::Vector{<:AbstractAPIRoute})::Nothing
-    if length(routes) == 1
-        route!(c, routes[1])
-        return
+function route!(c::AbstractConnection, route::CombinedAPIRoute)
+    if get_method(c) == "POST"
+        route!(c, route.routes[2])
+    else
+        route!(c, route.routes[1])
     end
-    target = get_route(c)
-    route!(c, routes[target])
-    return
 end
 
 function route!(c::AbstractConnection, route::APIRoute{:get})
@@ -71,7 +64,7 @@ function route!(c::AbstractConnection, route::APIRoute{:post})
     n = length(params)
     if n > 2
         postvalue = if params[3] <: AbstractDict
-            JSON.parse!(get_post(c), Dict)
+            JSON.parse(get_post(c), Dict)
         else
             get_post(c)
         end
@@ -90,6 +83,68 @@ api_route(f::Function, rqt::RQType{<:Any}, path::AbstractString) = begin
     end
     APIRoute{typeof(rqt).parameters[1]}(path, f, argnames)
 end
+
+api_route(r1::APIRoute{:get}, r2::APIRoute{:post}) = begin
+    path = r1.path
+    combined = CombinedAPIRoute(path, r1 => r2)
+    r1.path = ""
+    r2.path = ""
+    combined::CombinedAPIRoute
+end
+
+api_route(r1::APIRoute{:post}, r2::APIRoute{:get}) = api_route(r2, r1)
+
+#==
+parent routes
+==#
+
+abstract type AbstractParentRoute <: Toolips.AbstractHTTPRoute end
+
+struct ParentRoute{T <: Toolips.AbstractHTTPRoute} <: AbstractParentRoute
+    path::String
+    page::Function
+    pages::Vector{T}
+end
+
+function parent_route(f::Function, path::String, provided_routes::Toolips.AbstractHTTPRoute ...)
+    routes = [provided_routes ...]
+    if length(routes) == 0
+        routes = Toolips.AbstractHTTPRoute[]
+    end
+    ParentRoute{typeof(routes).parameters[1]}(path, f, routes)
+end
+
+function route!(c::AbstractConnection, routes::Vector{<:AbstractParentRoute})
+    target = get_route(c)
+    n_slashes = count('/', target)
+    target = split(target, "?")[1]
+    if n_slashes < 1
+        if ~(target in routes)
+            route!(c, routes["404"])
+            return
+        end
+        route!(c, routes[target], target)
+    else
+        split_target = split(target, "/")
+        head = "/" * split_target[2]
+        if ~(head in routes)
+            route!(c, routes["404"])
+            return
+        end
+        route!(c, routes[head], target)
+    end
+    nothing::Nothing
+end
+
+function route!(c::AbstractConnection, route::ParentRoute, target::AbstractString = route.path)
+    if target == route.path
+        route.page(c)
+    else
+        route!(c, route.pages)
+    end
+    nothing::Nothing
+end
+
 
 export POST, GET, api_route
 
@@ -115,9 +170,6 @@ friends_route = (c, username) -> begin
     end
 end
 
-adder = (c, x::Int64, y::Int64) -> begin
-    write!(c, x + y)
-end
 
 post_test = (c::AbstractConnection, info::String) -> begin
     write!(c, "information has been sent: $info")
@@ -127,12 +179,23 @@ post_test2 = (c::AbstractConnection, info::Dict) -> begin
     write!(c, "information has been sent: $(info["x"])")
 end
 
-post2 = api_route(post_test2, POST, "/posttest2")
-postt = api_route(post_test, POST, "/posttest")
-age = api_route(age_route, GET, "/age")
-friends = api_route(friends_route, GET, "/friends")
-adder_r = api_route(adder, GET, "/add")
-export age, friends, adder_r, postt, post2
+post2 = api_route(post_test2, POST, "/api/age")
+postt = api_route(post_test, POST, "/api/posttest")
+age = api_route(age_route, GET, "/api/age")
+friends = api_route(friends_route, GET, "/api/friends")
+adder_r = api_route((c, x::Int64, y::Int64) -> write!(c, x + y), GET, "/api/add")
+post_and_age = api_route(age, post2)
+
+API_route = ToolipsAPIRouter.parent_route("/api", friends, adder_r, post_and_age) do c::AbstractConnection
+    write!(c, "welcome to the API")
+end
+
+main = ToolipsAPIRouter.parent_route("/") do c::AbstractConnection
+    write!(c, "my main website")
+end
+
+err = ToolipsAPIRouter.parent_route(Toolips.default_404.page, "404")
+export err, API_route, main
 end
 
 end # module ToolipsAPIRouter
